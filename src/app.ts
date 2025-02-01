@@ -1,3 +1,5 @@
-const message: string = "Hola mundo";
+import { findHeroByID } from "./services/hero.service";
 
-console.log(message);
+const hero = findHeroByID(2);
+
+console.log(hero?.name ?? "Hero not found!!");
