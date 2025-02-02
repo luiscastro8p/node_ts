@@ -1,10 +1,16 @@
-import { buildLogger } from "./plugins/logger.pluggin";
-import { findHeroByID } from "./services/hero.service";
+import { envs } from "./config/envs";
+import { Server } from "./presentation/server"
 
-const hero = findHeroByID(2);
 
-console.log(hero?.name ?? "Hero not found!!");
+(async () => {
+  main()
+})()
 
-const logger = buildLogger('app.js')
-
-logger.error("Hubo un error en el servidor")
+function main(){
+  const server = new Server({
+    port:envs.PORT,
+    public_path:envs.PUBLIC_PATH
+  });
+  server.start()
+  console.log("main 2")
+}
