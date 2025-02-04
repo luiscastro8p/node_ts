@@ -8,8 +8,8 @@ export class UserRoutes {
 
     // Routes
     router.get("/", (req, res) => usersController.getUsers(req, res));
+    router.post("/", usersController.createUser);
     router.get("/:id", usersController.getUsersById);
-    router.post("/:id", usersController.createUser);
     router.put("/:id", usersController.updateUser);
     router.delete("/:id", usersController.deleteUser);
 

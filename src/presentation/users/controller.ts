@@ -1,69 +1,87 @@
 import { Request, Response } from "express";
-
-const users = [
-  { id: 1, name: "Luis", createdAt: new Date() },
-  { id: 2, name: "Shuy", createdAt: new Date() },
-];
+import { prisma } from "../../data/postgres";
+import { CreateUserDto, UpdateUserDto } from "../../domain/dtos";
 
 export class userController {
   constructor() {}
 
-  public getUsers = (req: Request, res: Response) => {
+  public getUsers = async (req: Request, res: Response) => {
+    const users = await prisma.user.findMany();
     res.json(users);
   };
 
-  public getUsersById = (req: Request, res: Response) => {
+  public getUsersById = async (req: Request, res: Response) => {
     const id = +req.params.id;
     if (isNaN(id))
       res.status(400).json({ error: "ID argument is not a number" });
 
-    const user = users.find((item) => item.id == id);
-    if (user) {
-      res.json(user);
+    const userById = await prisma.user.findFirst({
+      where: {
+        id,
+      },
+    });
+    if (userById) {
+      res.json(userById);
     }
 
     res.status(404).json({ error: `User ${id} not found` });
   };
 
-  public createUser = (req: Request, res: Response) => {
-    const { name } = req.body;
-    if (!name) res.status(400).json({ error: "name property is required" });
+  public createUser = async (req: Request, res: Response) => {
+    const [error, createUserDto] = CreateUserDto.create(req.body);
 
-    users.push({
-      id: users.length + 1,
-      name,
-      createdAt: new Date(),
+    if (error) res.status(400).json({ error: error });
+
+    const user = await prisma.user.create({
+      data: createUserDto!,
     });
-    res.json(req.body);
-  };
-
-  public updateUser = (req: Request, res: Response) => {
-    const id = +req.params.id;
-    if (isNaN(id))
-      res.status(400).json({ error: "ID argument is not a number" });
-
-    const user = users.find((item) => item.id == id);
-    if (!user) res.status(404).json({ error: `User ${id} not found` });
-
-    const { name, createdAt } = req.body;
-    if (!name) res.status(400).json({ error: "name property is required" });
-    if (user) {
-      user.name = name || user.name;
-      user.createdAt = createdAt || user.createdAt;
-    }
 
     res.json(user);
   };
-  public deleteUser = (req: Request, res: Response) => {
+
+  public updateUser = async (req: Request, res: Response) => {
+    const id = +req.params.id;
+
+    const [error, updateUserDto] = UpdateUserDto.create({ ...req.body, id });
+    if (error) res.status(400).json({ error });
+
+    const userById = await prisma.user.findFirst({
+      where: {
+        id,
+      },
+    });
+    if (!userById) res.status(404).json({ error: `User ${id} not found` });
+    const values = updateUserDto!.values
+    const completedAt = new Date(values.completedAt).toISOString();
+    const updateUser = await prisma.user.update({
+      where: {
+        id,
+      },
+      data: {
+        ...values,
+        completedAt:completedAt
+      },
+    });
+
+    res.json(updateUser);
+  };
+  public deleteUser = async (req: Request, res: Response) => {
     const id = +req.params.id;
     if (isNaN(id))
       res.status(400).json({ error: "ID argument is not a number" });
 
-    const user = users.find((item) => item.id == id);
-    if (!user) res.status(404).json({ error: `User ${id} not found` });
-    if (user) {
-      users.splice(users.indexOf(user), 1);
-      res.json(user);
-    }
+    const userById = await prisma.user.findFirst({
+      where: {
+        id,
+      },
+    });
+    if (!userById) res.status(404).json({ error: `User ${id} not found` });
+
+    const deleted = await prisma.user.delete({
+      where: {
+        id,
+      },
+    });
+    res.json(deleted);
   };
 }
