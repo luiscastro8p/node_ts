@@ -1,41 +1,30 @@
 import { Request, Response } from "express";
-import { prisma } from "../../data/postgres";
 import { CreateUserDto, UpdateUserDto } from "../../domain/dtos";
+import { UserRepository } from "../../domain";
 
 export class userController {
-  constructor() {}
+  constructor(private readonly userRepository: UserRepository) {}
 
   public getUsers = async (req: Request, res: Response) => {
-    const users = await prisma.user.findMany();
+    const users = await this.userRepository.getAll();
     res.json(users);
   };
 
   public getUsersById = async (req: Request, res: Response) => {
     const id = +req.params.id;
-    if (isNaN(id))
-      res.status(400).json({ error: "ID argument is not a number" });
-
-    const userById = await prisma.user.findFirst({
-      where: {
-        id,
-      },
-    });
-    if (userById) {
-      res.json(userById);
+    try {
+      const user = await this.userRepository.findById(id);
+      res.json(user);
+    } catch (error) {
+      res.status(400).json({ error });
     }
-
-    res.status(404).json({ error: `User ${id} not found` });
   };
 
   public createUser = async (req: Request, res: Response) => {
     const [error, createUserDto] = CreateUserDto.create(req.body);
-
     if (error) res.status(400).json({ error: error });
 
-    const user = await prisma.user.create({
-      data: createUserDto!,
-    });
-
+    const user = await this.userRepository.create(createUserDto!);
     res.json(user);
   };
 
@@ -45,43 +34,12 @@ export class userController {
     const [error, updateUserDto] = UpdateUserDto.create({ ...req.body, id });
     if (error) res.status(400).json({ error });
 
-    const userById = await prisma.user.findFirst({
-      where: {
-        id,
-      },
-    });
-    if (!userById) res.status(404).json({ error: `User ${id} not found` });
-    const values = updateUserDto!.values
-    const completedAt = new Date(values.completedAt).toISOString();
-    const updateUser = await prisma.user.update({
-      where: {
-        id,
-      },
-      data: {
-        ...values,
-        completedAt:completedAt
-      },
-    });
-
-    res.json(updateUser);
+    const user = await this.userRepository.updateById(updateUserDto!);
+    res.json(user);
   };
   public deleteUser = async (req: Request, res: Response) => {
     const id = +req.params.id;
-    if (isNaN(id))
-      res.status(400).json({ error: "ID argument is not a number" });
-
-    const userById = await prisma.user.findFirst({
-      where: {
-        id,
-      },
-    });
-    if (!userById) res.status(404).json({ error: `User ${id} not found` });
-
-    const deleted = await prisma.user.delete({
-      where: {
-        id,
-      },
-    });
-    res.json(deleted);
+    const deletedUser = await this.userRepository.deleteById(id);
+    res.json(deletedUser);
   };
 }
